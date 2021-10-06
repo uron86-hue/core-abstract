@@ -15,7 +15,7 @@ public class StockPoint {
 
   Color color;
   BigInteger size;
-  int quantity;
+  BigInteger quantity;
 
   @JsonPOJOBuilder(withPrefix = "")
   public static class StockPointBuilder {
