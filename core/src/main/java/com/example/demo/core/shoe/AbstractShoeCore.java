@@ -1,6 +1,7 @@
-package com.example.demo.core;
+package com.example.demo.core.shoe;
 
-import com.example.demo.facade.ShoeFacade;
+import com.example.demo.core.Implementation;
+import com.example.demo.facade.shoe.ShoeFacade;
 import java.util.Optional;
 import javax.annotation.PostConstruct;
 import lombok.val;
@@ -13,14 +14,14 @@ public abstract class AbstractShoeCore implements ShoeCore {
   private ShoeFacade shoeFacade;
 
   @PostConstruct
-  void init(){
+  void init() {
 
     val version = Optional.ofNullable(this.getClass().getAnnotation(Implementation.class))
-                          .map(Implementation::version)
-                          .orElseThrow(() -> new FatalBeanException("AbstractShoeCore implementation should be annotated with @Implementation"));
+        .map(Implementation::version)
+        .orElseThrow(() -> new FatalBeanException(
+            "AbstractShoeCore implementation should be annotated with @Implementation"));
 
     shoeFacade.register(version, this);
 
   }
-
 }
