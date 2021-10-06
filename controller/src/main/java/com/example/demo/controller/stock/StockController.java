@@ -16,11 +16,16 @@ public class StockController {
 
   private final StockFacade stockFacade;
 
+  /**
+   * Get the shoes stock and its state (EMPTY, SOME, FULL).
+   *
+   * @param version version of the implementation we want to use (only one implementation in this
+   *                exercise)
+   * @return the shoes stock
+   */
   @GetMapping
   public ResponseEntity<Stock> get(@RequestHeader Integer version) {
-
     return ResponseEntity.ok(stockFacade.get(version).get());
-
   }
 
 }
