@@ -14,12 +14,14 @@ import com.example.demo.dto.out.StockPoint;
 import com.example.demo.facade.stock.StockFacade;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
@@ -61,6 +63,56 @@ class StockControllerTest {
     // then
     assertThat(stock.getStatusCode()).isEqualTo(OK);
     assertThat(stock.getBody()).isEqualTo(getExpectedInitialStock());
+  }
+
+  @Test
+  void shouldCreateAStockPoint() {
+    // given
+    Color blueColor = Color.BLUE;
+    BigInteger size36 = BigInteger.valueOf(36);
+    BigInteger quantity = BigInteger.valueOf(7);
+    StockPoint stockPointToCreate = StockPoint.builder()
+        .color(blueColor)
+        .size(size36)
+        .quantity(quantity)
+        .build();
+    ShoeEntity shoe = new ShoeEntity(size36, blueColor, quantity);
+
+    when(shoeRepository.findByColorAndSize(blueColor, size36)).thenReturn(Optional.empty());
+    ArgumentCaptor<ShoeEntity> shoeCaptor = ArgumentCaptor.forClass(ShoeEntity.class);
+    when(shoeRepository.save(shoeCaptor.capture())).thenReturn(shoe);
+
+    // when
+    ResponseEntity<Void> result = stockController.update(1, stockPointToCreate);
+
+    // then
+    assertThat(result.getStatusCode()).isEqualTo(OK);
+    assertThat(shoeCaptor.getValue()).usingRecursiveComparison().isEqualTo(shoe);
+  }
+
+  @Test
+  void shouldUpdateAStockPoint() {
+    // given
+    Color blueColor = Color.BLUE;
+    BigInteger size36 = BigInteger.valueOf(36);
+    BigInteger quantity = BigInteger.valueOf(7);
+    StockPoint stockPointToCreate = StockPoint.builder()
+        .color(blueColor)
+        .size(size36)
+        .quantity(quantity)
+        .build();
+    ShoeEntity shoe = new ShoeEntity(size36, blueColor, quantity);
+
+    when(shoeRepository.findByColorAndSize(blueColor, size36)).thenReturn(Optional.of(shoe));
+    ArgumentCaptor<ShoeEntity> shoeCaptor = ArgumentCaptor.forClass(ShoeEntity.class);
+    when(shoeRepository.save(shoeCaptor.capture())).thenReturn(shoe);
+
+    // when
+    ResponseEntity<Void> result = stockController.update(1, stockPointToCreate);
+
+    // then
+    assertThat(result.getStatusCode()).isEqualTo(OK);
+    assertThat(shoeCaptor.getValue()).usingRecursiveComparison().isEqualTo(shoe);
   }
 
   /**

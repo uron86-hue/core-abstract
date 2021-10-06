@@ -29,6 +29,7 @@ public class DatabaseConfig {
         .setType(EmbeddedDatabaseType.HSQL)
         .addScript("sql/create-db.sql")
         .addScript("sql/insert-data.sql")
+        .addScript("sql/create-sequence.sql")
         .build();
   }
 
