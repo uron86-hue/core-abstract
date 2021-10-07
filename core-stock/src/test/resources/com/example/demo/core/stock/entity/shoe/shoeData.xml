@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset>
+
+  <Shoe
+    id="1"
+    name="First shoe"
+    size="40"
+    color="BLACK"
+    quantity="10"/>
+
+  <Shoe
+    id="2"
+    name="Second shoe"
+    size="41"
+    color="BLACK"
+    quantity="11"/>
+
+  <Shoe
+    id="3"
+    name="Third shoe"
+    size="41"
+    color="BLUE"
+    quantity="5"/>-
+
+</dataset>

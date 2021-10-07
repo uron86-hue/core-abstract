@@ -26,6 +26,11 @@ public class ShoeEntity {
   public ShoeEntity() {
   }
 
+  public ShoeEntity(BigInteger size, Color color) {
+    setSize(size);
+    setColor(color);
+  }
+
   public ShoeEntity(BigInteger size, Color color, BigInteger quantity) {
     setSize(size);
     setColor(color);

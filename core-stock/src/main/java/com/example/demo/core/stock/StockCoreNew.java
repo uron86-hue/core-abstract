@@ -9,6 +9,7 @@ import com.example.demo.dto.out.Stock;
 import com.example.demo.dto.out.StockPoint;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Optional;
 
 @Implementation(version = 1)
 public class StockCoreNew extends AbstractStockCore {
@@ -38,6 +39,20 @@ public class StockCoreNew extends AbstractStockCore {
         .state(getState(stockPoints))
         .shoes(stockPoints)
         .build();
+  }
+
+  @Override
+  public void update(StockPoint stockPoint) {
+    // Get the shoe by its color and its size if it exists
+    Optional<ShoeEntity> optionalShoe = shoeRepository
+        .findByColorAndSize(stockPoint.getColor(), stockPoint.getSize());
+
+    // Create or update the shoe and save it into database
+    ShoeEntity shoeEntity = optionalShoe
+        .orElse(new ShoeEntity(stockPoint.getSize(), stockPoint.getColor()));
+    shoeEntity.setQuantity(stockPoint.getQuantity());
+
+    shoeRepository.save(shoeEntity);
   }
 
   /**
