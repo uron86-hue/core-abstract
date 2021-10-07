@@ -3,6 +3,7 @@ package com.example.demo.controller.stock;
 import com.example.demo.dto.out.Stock;
 import com.example.demo.dto.out.StockPoint;
 import com.example.demo.facade.stock.StockFacade;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -41,7 +42,7 @@ public class StockController {
    */
   @PatchMapping
   public ResponseEntity<Void> update(@RequestHeader Integer version,
-      @RequestBody StockPoint stockPoint) {
+      @Valid @RequestBody StockPoint stockPoint) {
     stockFacade.get(version).update(stockPoint);
     return ResponseEntity.ok().build();
   }

@@ -72,7 +72,7 @@ class StockControllerTest {
     BigInteger size36 = BigInteger.valueOf(36);
     BigInteger quantity = BigInteger.valueOf(7);
     StockPoint stockPointToCreate = StockPoint.builder()
-        .color(blueColor)
+        .color(blueColor.name())
         .size(size36)
         .quantity(quantity)
         .build();
@@ -96,8 +96,8 @@ class StockControllerTest {
     Color blueColor = Color.BLUE;
     BigInteger size36 = BigInteger.valueOf(36);
     BigInteger quantity = BigInteger.valueOf(7);
-    StockPoint stockPointToCreate = StockPoint.builder()
-        .color(blueColor)
+    StockPoint stockPointToUpdate = StockPoint.builder()
+        .color(blueColor.name())
         .size(size36)
         .quantity(quantity)
         .build();
@@ -108,7 +108,7 @@ class StockControllerTest {
     when(shoeRepository.save(shoeCaptor.capture())).thenReturn(shoe);
 
     // when
-    ResponseEntity<Void> result = stockController.update(1, stockPointToCreate);
+    ResponseEntity<Void> result = stockController.update(1, stockPointToUpdate);
 
     // then
     assertThat(result.getStatusCode()).isEqualTo(OK);
@@ -116,7 +116,7 @@ class StockControllerTest {
   }
 
   /**
-   * In order to improve readability of unit tests, we create here sthe object for the initial
+   * In order to improve readability of unit tests, we create here the object for the initial
    * expected stock.
    *
    * @return the initial expected stock
@@ -124,17 +124,17 @@ class StockControllerTest {
   private Stock getExpectedInitialStock() {
     List<StockPoint> stockPoints = List.of(
         StockPoint.builder()
-            .color(Color.BLACK)
+            .color("BLACK")
             .size(BigInteger.valueOf(40))
             .quantity(BigInteger.valueOf(10))
             .build(),
         StockPoint.builder()
-            .color(Color.BLACK)
+            .color("BLACK")
             .size(BigInteger.valueOf(41))
             .quantity(BigInteger.ZERO)
             .build(),
         StockPoint.builder()
-            .color(Color.BLUE)
+            .color("BLUE")
             .size(BigInteger.valueOf(39))
             .quantity(BigInteger.valueOf(10))
             .build());
