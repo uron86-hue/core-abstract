@@ -25,4 +25,13 @@ class ShoeRepositoryTest extends DataLoadingTestManager {
     // then
     assertThat(shoe).isPresent().get().hasFieldOrPropertyWithValue("id", 2L);
   }
+
+  @Test
+  void shouldSumQuantitiesOfAllShoes() {
+    // when
+    BigInteger sumOfAllShoes = shoeRepository.sumAllQuantities();
+
+    // then
+    assertThat(sumOfAllShoes).isEqualTo(26);
+  }
 }

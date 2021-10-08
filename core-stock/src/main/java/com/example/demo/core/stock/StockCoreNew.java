@@ -11,6 +11,8 @@ import com.example.demo.dto.out.StockPoint;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Implementation(version = 1)
 public class StockCoreNew extends AbstractStockCore {
@@ -48,12 +50,41 @@ public class StockCoreNew extends AbstractStockCore {
     Optional<ShoeEntity> optionalShoe = shoeRepository
         .findByColorAndSize(Color.valueOf(stockPoint.getColor()), stockPoint.getSize());
 
+    // Check is the global shoes capacity is respected
+    checkGlobalCapacity(optionalShoe, stockPoint.getQuantity());
+
     // Create or update the shoe and save it into database
     ShoeEntity shoeEntity = optionalShoe
         .orElse(new ShoeEntity(stockPoint.getSize(), Color.valueOf(stockPoint.getColor())));
     shoeEntity.setQuantity(stockPoint.getQuantity());
 
     shoeRepository.save(shoeEntity);
+  }
+
+  /**
+   * Check if the global capacity is respected with the updated quantity.
+   *
+   * @param optionalShoe    an optional representing the potential previous stock of the updated
+   *                        shoe model
+   * @param updatedQuantity the new quantity to update
+   * @throws IllegalArgumentException if the global capacity is exceeded with the new quantity
+   */
+  private void checkGlobalCapacity(Optional<ShoeEntity> optionalShoe, BigInteger updatedQuantity) {
+    // Sum the quantities of all shoes
+    BigInteger sumOfAllShoes = shoeRepository.sumAllQuantities();
+
+    // To check if the sum of all shoes does not exceed global capacity,
+    // we subtract quantity of updated shoe model (if it exists - it does not exist if it is a new model)
+    // and we add the quantity of the update
+    BigInteger initialQuantity =
+        optionalShoe.isPresent() ? optionalShoe.get().getQuantity() : BigInteger.ZERO;
+    BigInteger sumOfAllShoesAfterUpdate = sumOfAllShoes.subtract(initialQuantity)
+        .add(updatedQuantity);
+    if (sumOfAllShoesAfterUpdate.compareTo(MAXIMUM_CAPACITY) > 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Global capacity (" + sumOfAllShoesAfterUpdate + " instead of " + MAXIMUM_CAPACITY
+              + ") is exceeded with quantity : " + updatedQuantity);
+    }
   }
 
   /**

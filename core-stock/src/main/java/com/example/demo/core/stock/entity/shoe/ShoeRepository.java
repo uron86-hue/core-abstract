@@ -4,6 +4,7 @@ import com.example.demo.dto.in.ShoeFilter.Color;
 import java.math.BigInteger;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * JPA repository to query shoe entities.
@@ -18,4 +19,12 @@ public interface ShoeRepository extends JpaRepository<ShoeEntity, Long> {
    * @return an optional shoe
    */
   Optional<ShoeEntity> findByColorAndSize(Color color, BigInteger size);
+
+  /**
+   * Sum the quantities of all shoes.
+   *
+   * @return the sum
+   */
+  @Query("SELECT SUM(shoe.quantity) from ShoeEntity shoe")
+  BigInteger sumAllQuantities();
 }
