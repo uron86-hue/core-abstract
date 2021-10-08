@@ -1,6 +1,7 @@
 package com.example.demo.controller.stock;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.OK;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 @TestInstance(Lifecycle.PER_CLASS)
 @ExtendWith(MockitoExtension.class)
@@ -78,6 +80,7 @@ class StockControllerTest {
         .build();
     ShoeEntity shoe = new ShoeEntity(size36, blueColor, quantity);
 
+    when(shoeRepository.sumAllQuantities()).thenReturn(BigInteger.valueOf(20));
     when(shoeRepository.findByColorAndSize(blueColor, size36)).thenReturn(Optional.empty());
     ArgumentCaptor<ShoeEntity> shoeCaptor = ArgumentCaptor.forClass(ShoeEntity.class);
     when(shoeRepository.save(shoeCaptor.capture())).thenReturn(shoe);
@@ -103,6 +106,7 @@ class StockControllerTest {
         .build();
     ShoeEntity shoe = new ShoeEntity(size36, blueColor, quantity);
 
+    when(shoeRepository.sumAllQuantities()).thenReturn(BigInteger.valueOf(20));
     when(shoeRepository.findByColorAndSize(blueColor, size36)).thenReturn(Optional.of(shoe));
     ArgumentCaptor<ShoeEntity> shoeCaptor = ArgumentCaptor.forClass(ShoeEntity.class);
     when(shoeRepository.save(shoeCaptor.capture())).thenReturn(shoe);
@@ -113,6 +117,26 @@ class StockControllerTest {
     // then
     assertThat(result.getStatusCode()).isEqualTo(OK);
     assertThat(shoeCaptor.getValue()).usingRecursiveComparison().isEqualTo(shoe);
+  }
+
+  @Test
+  void shouldNotUpdateStock_whenGlobalCapacityIsExceeded() {
+    // given
+    Color blueColor = Color.BLUE;
+    BigInteger size36 = BigInteger.valueOf(36);
+    BigInteger quantity = BigInteger.valueOf(7);
+    StockPoint stockPointToUpdate = StockPoint.builder()
+        .color(blueColor.name())
+        .size(size36)
+        .quantity(quantity)
+        .build();
+
+    when(shoeRepository.sumAllQuantities()).thenReturn(BigInteger.valueOf(24));
+
+    // when
+    assertThatThrownBy(() -> stockController.update(1, stockPointToUpdate))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("Global capacity (31 instead of 30) is exceeded with quantity : 7");
   }
 
   /**
