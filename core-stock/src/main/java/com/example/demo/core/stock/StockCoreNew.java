@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import com.example.demo.core.Implementation;
 import com.example.demo.core.stock.entity.shoe.ShoeEntity;
 import com.example.demo.core.stock.entity.shoe.ShoeRepository;
+import com.example.demo.dto.in.ShoeFilter.Color;
 import com.example.demo.dto.out.Stock;
 import com.example.demo.dto.out.StockPoint;
 import java.math.BigInteger;
@@ -45,11 +46,11 @@ public class StockCoreNew extends AbstractStockCore {
   public void update(StockPoint stockPoint) {
     // Get the shoe by its color and its size if it exists
     Optional<ShoeEntity> optionalShoe = shoeRepository
-        .findByColorAndSize(stockPoint.getColor(), stockPoint.getSize());
+        .findByColorAndSize(Color.valueOf(stockPoint.getColor()), stockPoint.getSize());
 
     // Create or update the shoe and save it into database
     ShoeEntity shoeEntity = optionalShoe
-        .orElse(new ShoeEntity(stockPoint.getSize(), stockPoint.getColor()));
+        .orElse(new ShoeEntity(stockPoint.getSize(), Color.valueOf(stockPoint.getColor())));
     shoeEntity.setQuantity(stockPoint.getQuantity());
 
     shoeRepository.save(shoeEntity);
@@ -63,7 +64,7 @@ public class StockCoreNew extends AbstractStockCore {
    */
   private StockPoint buildStockPoint(ShoeEntity shoeEntity) {
     return StockPoint.builder()
-        .color(shoeEntity.getColor())
+        .color(shoeEntity.getColor().name())
         .size(shoeEntity.getSize())
         .quantity(shoeEntity.getQuantity())
         .build();
