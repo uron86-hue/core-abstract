@@ -1,423 +1,116 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Explanations](#explanations)
-    - [Notes](#notes)
-    - [What are we talking about](#what-are-we-talking-about)
-    - [How we address the issue](#how-we-address-the-issue)
-    - [Make DTOs the basis of your application](#make-dtos-the-basis-of-your-application)
-    - [Make your controller agnostic of the core](#make-your-controller-agnostic-of-the-core)
-        - [Core abstraction](#core-abstraction)
-        - [Implementing your core](#implementing-your-core)
-    - [Versioning APIs](#versioning-apis)
-- [Validating the application](#validating-the-application)
-    - [Version 1](#version-1)
-    - [Version 2](#version-2)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 # Explanations
 
-## Notes
+## Features
 
-DTO term used in this post refers only to the `Data Transfer Object`, and not value objects, or any
-other objects carrying anything else than data initialized to avoid expensive _lazy_ computation. A
-Projection is a DTO.
+Here, we want to access two features:
 
-## What are we talking about
+- Get the global stock of shoes
+- Patch this stock
 
-We often encounter hard times refactoring and upgrading our libraries. Most of the time it goes
-smoothly and upgrading is straightforward: adding few flags, removing others, refactoring methods
-are always pretty easy and impactless tasks (with a well tested code base). But when it comes to
-changing paradigm, refactoring domains, changing entity relationships,... it is where things becomes
-messy:
+### Get the global stock of shoes
 
-- you will most likely duplicate code to satisfy your legacy clients
-- you will have to create new transformers (domain to DTO) or change your DTOs
-- you may have to change the whole stack, or create new endpoints using your new code
+For this feature, we want to have some information:
 
-## How we address the issue
+- All shoe models (a shoe model is characterized by a color and a size) with their respective
+  quantities in stock (the respective DTO is StockPoint - see `com.example.demo.dto.out.StockPoint`)
+- The state of the stock (if it is empty, full or not full and not empty - 'SOME' value)
 
-This issue is really important, for we often change technology, sometimes for huge improvement,
-sometimes for clarity purpose, sometimes to respond to new business needs,...
+The DTO we return for this feature is Stock (see `com.example.demo.dto.out.Stock`)
 
-Now, it is important to note that right now, this is not an issue we _fixed_, but a simple draft on
-how to do it.
+### Patch the stock
 
-## Make DTOs the basis of your application
+For this feature, I made the choice to patch the stock only for one shoe model at a time. For each
+patch, we verify that the global stock does not exceed the global capacity (30 shoes).
 
-As a REST API developer, what are you if no one consumes your API? You are bound to provide your
-customer with data _first_. Does anyone but you even cares whether you are using Hibernate or jooq
-or plain JDBC, as long as they have their DTOs? Do they even care that your table `SHOE` as a join
-table to `SIZE` called `EXISTS_IN`?
+We have to use the previous StockPoint DTO to patch the stock. Here is an example:
 
-We can rapidly notice that your DTO is the core of your REST API, way before your domain or business
-services.
-
-The first suggestion of this post is then to create your DTO _before_ your domain, and let it drive
-your design.
-
-<details>
-<summary><b>The shoe example</b></summary>
-
-<details>
-<summary>Maven configuration</summary>
-
-```pom.xml
-  <parent>
-    <artifactId>demo</artifactId>
-    <groupId>com.example</groupId>
-    <version>1.0</version>
-  </parent>
-  <modelVersion>4.0.0</modelVersion>
-
-  <artifactId>dto</artifactId>
-```
-
-</details>
-
-<details>
-<summary>File system</summary>
-
-![image](https://user-images.githubusercontent.com/6195718/72352886-6187fe80-36e3-11ea-997f-f246f25b1c8c.png)
-
-</details>
-
-</details>
-
-## Make your controller agnostic of the core
-
-An important part of the idea is also that your controllers will be de facto _static_ once it will
-be consumed by at least one client. Indeed, you cannot control the workload of your clients, hence
-you will have to adapt to them, and guarantee them your service for as long as you judge fit (in
-practice, since money drives us, if the client is worth to keep, we all know the controller will
-remain untouched as long as this client does not migrate).
-
-![image](https://user-images.githubusercontent.com/6195718/72347878-647df180-36d9-11ea-97c7-4a618b08d464.png)
-
-This means that you will need your controller to be agnostic (as for the DTOs) of the business
-implementation. Once again, do your customer care if you are using a new table which requires them
-to update to a new API, if they do not need it anyway?
-
-So the whole point here is again to make your controller implementation agnostic of the core
-implementation.
-
-<details>
-<summary><b>The shoe example</b></summary>
-
-<details>
-<summary>Maven configuration</summary>
-
-```pom.xml
-  <parent>
-    <artifactId>demo</artifactId>
-    <groupId>com.example</groupId>
-    <version>1.0</version>
-  </parent>
-  <modelVersion>4.0.0</modelVersion>
-
-  <artifactId>controller</artifactId>
-
-  <dependencies>
-    <dependency>
-      <groupId>com.example</groupId>
-      <artifactId>dto</artifactId>
-      <version>${parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.example</groupId>
-      <artifactId>core</artifactId> <!-- Explanations are coming -->
-      <version>${parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.example</groupId>
-      <artifactId>core-legacy</artifactId> <!-- Explanations are coming -->
-      <version>${parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.example</groupId>
-      <artifactId>core-new</artifactId> <!-- Explanations are coming -->
-      <version>${parent.version}</version>
-    </dependency>
-  </dependencies>
-```
-
-</details>
-
-<details>
-<summary>File system</summary>
-
-![image](https://user-images.githubusercontent.com/6195718/72353056-ac097b00-36e3-11ea-91cc-a0448baeb747.png)
-
-</details>
-
-<details>
-<summary><code>ShoeController</code></summary>
-
-```java
-
-@Controller
-@RequestMapping(path = "/shoes")
-@RequiredArgsConstructor
-public class ShoeController {
-
-  private final ShoeFacade shoeFacade;
-
-  @GetMapping(path = "/search")
-  public ResponseEntity<Shoes> all(ShoeFilter filter, @RequestHeader BigInteger version) {
-
-    return ResponseEntity.ok(shoeFacade.get(version).search(filter));
-
-  }
-
+```json
+{
+  "color": "BLACK",
+  "size": 36,
+  "quantity": 11
 }
 ```
 
-</details>
+## Embedded database
 
-</details>
+To store all shoe models, I create a ShoeEntity
+(see `com.example.demo.core.stock.entity.shoe.ShoeEntity`) and its repository, and I made the choice
+of an HSQL embedded database (see configuration in `com.example.demo.config.DatabaseConfig`).
 
-### Core abstraction
+## DTO validation
 
-Well, we all know your controller needs to call some business code, whether to access direct domain
-data, or to compute some complex operations. So the whole point of making your controller "
-business-agnostic" is to create a core abstraction, depending only on DTOs. The contracts of this
-implementation should be something like:
+In order to validate the StockPoint DTO, javax.validation is used.
 
-> Given the input DTO, return an output DTO.
+@Valid annotation in the controller (
+see `com.example.demo.controller.stock.StockController`) and several annotations (@NotNull, @Min,
+@Max, @PositiveOrZero, @Pattern) in StockPoint are used.
 
-As simple as that. This way, your core implementation indeed depends only on DTOs.
+## Test strategy
 
-![image](https://user-images.githubusercontent.com/6195718/72345453-20d4b900-36d4-11ea-86a6-40823269f0dc.png)
+Unit tests are divided in 3 categories:
 
-<details>
-<summary><b>The shoe example</b></summary>
+- Functional tests of the features (see `com.example.demo.controller.stock.StockControllerTest`).
+  Mockito is used to isolate the database part
+- Database tests (with dbUnit and springtest-db-unit) for the repository accesses (
+  see `com.example.demo.core.stock.entity.shoe.ShoeRepositoryTest`)
+- DTO validation tests (see `com.example.demo.dto.out.StockPointTest`)
 
-<details>
-<summary>Maven configuration</summary>
-
-```pom.xml
-  <parent>
-    <artifactId>demo</artifactId>
-    <groupId>com.example</groupId>
-    <version>1.0</version>
-  </parent>
-  <modelVersion>4.0.0</modelVersion>
-
-  <artifactId>core</artifactId>
-  <dependencies>
-    <dependency>
-      <groupId>com.example</groupId>
-      <artifactId>dto</artifactId>
-      <version>1.0</version>
-    </dependency>
-  </dependencies>
-```
-
-</details>
-
-<details>
-<summary>File system</summary>
-
-![image](https://user-images.githubusercontent.com/6195718/72353336-34881b80-36e4-11ea-8228-93e4a5cd4dbc.png)
-
-</details>
-
-<details>
-<summary><code>ShoeFacade</code></summary>
-
-```java
-
-@Component
-public class ShoeFacade {
-
-  private Map<BigInteger, ShoeCore> implementations = new HashMap<>();
-
-  public ShoeCore get(BigInteger version) {
-    return implementations.get(version);
-  }
-
-  public void register(BigInteger version, ShoeCore implementation) {
-    this.implementations.put(version, implementation);
-  }
-
-}
-```
-
-</details>
-
-<details>
-<summary><code>ShoeCore</code></summary>
-
-```java
-public interface ShoeCore {
-
-  Shoes search(ShoeFilter filter);
-
-}
-```
-
-</details>
-
-<details>
-<summary><code>AbstractShoeCore</code></summary>
-
-```java
-public abstract class AbstractShoeCore implements ShoeCore {
-
-  @Autowired
-  private ShoeFacade shoeFacade;
-
-  @PostConstruct
-  void init() {
-
-    val version = Optional.ofNullable(this.getClass().getAnnotation(Implementation.class))
-        .map(Implementation::version)
-        .orElseThrow(() -> new FatalBeanException(
-            "AbstractShoeCore implementation should be annotated with @Implementation"));
-
-    shoeFacade.register(version, this);
-
-  }
-
-}
-```
-
-</details>
-
-<details>
-<summary><code>Implementation</code></summary>
-
-```java
-
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-@Component
-public @interface Implementation {
-
-  int version();
-
-}
-```
-
-</details>
-
-</details>
-
-### Implementing your core
-
-Okay, so we have an abstract core, how do we register cores implementations so that your built
-application can use them?
-
-Once again, it is quite simple: create a factory in the core abstraction, and let your core
-implementation register against this factory.
-
-Once you do that, your business implementation will be picked by the factory, instead of the
-controllers directly. Controllers will only need to integrate the factory.
-
-<details>
-<summary><b>The shoe example</b></summary>
-
-<details>
-<summary>Maven configuration</summary>
-
-```pom.xml
-  <parent>
-    <artifactId>demo</artifactId>
-    <groupId>com.example</groupId>
-    <version>1.0</version>
-  </parent>
-  <modelVersion>4.0.0</modelVersion>
-
-  <artifactId>core-new</artifactId>
-  <dependencies>
-    <dependency>
-      <groupId>com.example</groupId>
-      <artifactId>core</artifactId>
-      <version>1.0</version>
-    </dependency>
-  </dependencies>
-```
-
-</details>
-
-<details>
-<summary>File system</summary>
-
-![image](https://user-images.githubusercontent.com/6195718/72353502-76b15d00-36e4-11ea-893e-d0c18bd3fcc2.png)
-
-</details>
-
-</details>
-
-## Versioning APIs
-
-Following a [REST API versioning guide](https://www.baeldung.com/rest-versioning), we think
-versioning using content negotiation is pretty relevant for our purpose:
-
-- we will be able to return different DTO for the same endpoint
-- we may simply fetch the `version` from the content type, and fetch our core implementation
-  accordingly
-- our controllers will not depend on core implementation, but on the factory providing us core
-  implementation
+JUnit 5 is used for all these unit tests
 
 # Validating the application
 
 To run the application, you can run the following command in the root folder of the project:
 
 ```shell script
-mvn clean install && \
-  java -jar controller/target/controller-1.0.jar
+mvn clean install && java -jar controller/target/controller-1.0.jar
 ```
 
-## Version 1
+## Get stock feature
 
-To test version 1, you can call:
+To test this feature, you can call:
 
 ```shell script
-curl -X GET "http://localhost:8080/shoes/search" -H "version: 1"
+curl -X GET "http://localhost:8080/stock" -H "version: 1"
 ```
 
-which should answer (see `com.example.demo.core.show.ShoeCoreLegacy.search`):
+which should answer this default initial stock (see `com.example.demo.core.stock.StockCoreNew.get`):
 
 ```json
 {
+  "state": "SOME",
   "shoes": [
     {
-      "name": "Legacy shoe",
-      "size": 1,
-      "color": "BLUE"
+      "color": "BLACK",
+      "size": 40,
+      "quantity": 10
+    },
+    {
+      "color": "BLACK",
+      "size": 41,
+      "quantity": 0
+    },
+    {
+      "color": "BLUE",
+      "size": 39,
+      "quantity": 10
     }
   ]
 }
 ```
 
-## Version 2
+## Patch stock feature
 
-To test version 2, you can call:
+To test this feature, you can call:
 
 ```shell script
-curl -X GET "http://localhost:8080/shoes/search" -H "version: 2"
+curl -X PATCH "http://localhost:8080/stock" -H "version: 1"
 ```
 
-which should answer (see `com.example.demo.core.shoe.ShoeCoreNew.search`):
+which should just return a http code 200 (see `com.example.demo.core.stock.StockCoreNew.update`):
 
-```json
-{
-  "shoes": [
-    {
-      "name": "New shoe",
-      "size": 2,
-      "color": "BLACK"
-    }
-  ]
-}
-```
+To verify the update of the stock, you can call again the get stock feature
 
-# Conclusion
+## Postman
 
-We can see that both result are structurally identical, while the code is obviously different.
-
-This is indeed useful, since we can use almost any paradigm, segregate our code versions and
-eventually just drop one when implementation becomes unused and/or deprecated.
+If you prefer, you can import Postman collection which is at the root of the project
